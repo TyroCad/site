@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TyroCAD</title>
+  <style>
+    :root {
+      --desk: #1f2633;
+      --desk-2: #171c26;
+      --paper: #f4f0e6;
+      --paper-2: #ebe3d3;
+      --ink: #1f2530;
+      --muted: #5c6679;
+      --line: rgba(33, 42, 59, 0.14);
+      --blue: #5c84ff;
+      --green: #2ba86f;
+      --orange: #d38731;
+      --shadow: 0 22px 55px rgba(0, 0, 0, 0.28);
+      --preview-tilt: -1.4deg;
+      --preview-shift: -6px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.06), transparent 28%),
+        linear-gradient(180deg, var(--desk) 0%, var(--desk-2) 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .link {
+      color: #2d59ca;
+      text-decoration: underline;
+      text-decoration-thickness: 1.5px;
+      text-underline-offset: 3px;
+      transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+      border-radius: 6px;
+      padding: 0 2px;
+    }
+
+    .link:hover,
+    .link:focus-visible {
+      color: #1f3d8f;
+      background: rgba(92, 132, 255, 0.1);
+      box-shadow: 0 0 0 3px rgba(92, 132, 255, 0.08);
+      outline: none;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    code {
+      padding: 0.12em 0.38em;
+      border-radius: 6px;
+      background: rgba(35, 45, 61, 0.08);
+      border: 1px solid rgba(35, 45, 61, 0.1);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    .page {
+      width: min(1120px, calc(100% - 26px));
+      margin: 0 auto;
+      padding: 22px 0 54px;
+      position: relative;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+      color: #d5dceb;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .brand-mark svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .topnote {
+      font-size: 0.92rem;
+      color: #aeb8cb;
+    }
+
+    .sheet {
+      background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+      border-radius: 28px;
+      padding: 26px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sheet::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(50, 58, 73, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(50, 58, 73, 0.06) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+    }
+
+    .sheet::after {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border: 1px solid rgba(35, 45, 61, 0.08);
+      border-radius: 20px;
+      pointer-events: none;
+    }
+
+    .clip {
+      position: absolute;
+      top: -10px;
+      width: 56px;
+      height: 30px;
+      border-radius: 0 0 16px 16px;
+      background: linear-gradient(180deg, #aeb7c8 0%, #7e8797 100%);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+      z-index: 1;
+    }
+
+    .clip.left {
+      left: 34px;
+    }
+
+    .clip.right {
+      right: 34px;
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .coming-banner {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding: 18px 20px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(92, 132, 255, 0.14), rgba(43, 168, 111, 0.1));
+      border: 1px solid rgba(35, 45, 61, 0.12);
+      position: relative;
+      overflow: hidden;
+      margin-top: 16px;
+      text-align: center;
+      justify-items: center;
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+
+    .coming-banner::before {
+      content: "COMING SOON";
+      position: absolute;
+      right: 20px;
+      top: 14px;
+      font-size: clamp(2rem, 8vw, 5rem);
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      color: rgba(41, 71, 166, 0.08);
+      pointer-events: none;
+      white-space: nowrap;
+      transition: transform 220ms ease, color 220ms ease, letter-spacing 220ms ease;
+    }
+
+    .coming-banner:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+      border-color: rgba(35, 45, 61, 0.2);
+      background: linear-gradient(135deg, rgba(92, 132, 255, 0.18), rgba(43, 168, 111, 0.13));
+    }
+
+    .coming-banner:hover::before {
+      transform: translateX(-8px) rotate(-1deg);
+      color: rgba(41, 71, 166, 0.14);
+      letter-spacing: 0.2em;
+    }
+
+    .coming-banner h2,
+    .coming-banner p {
+      position: relative;
+      z-index: 1;
+    }
+
+    .coming-banner h2 {
+      font-size: clamp(1.7rem, 4vw, 2.8rem);
+      letter-spacing: -0.05em;
+      margin-bottom: 8px;
+    }
+
+    .coming-banner p {
+      color: #445166;
+      line-height: 1.68;
+      max-width: 52ch;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .intro {
+      padding: 6px 4px 0 2px;
+    }
+
+    .kicker {
+      display: inline-block;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: rgba(92, 132, 255, 0.11);
+      color: #3558c5;
+      font-size: 0.86rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p,
+    ul {
+      margin: 0;
+    }
+
+    h1 {
+      margin-top: 16px;
+      font-size: clamp(2.7rem, 7vw, 5rem);
+      line-height: 0.93;
+      letter-spacing: -0.06em;
+      max-width: 8.4ch;
+    }
+
+    .intro-text {
+      margin-top: 24px;
+      max-width: 48ch;
+      color: #394456;
+      font-size: 1.04rem;
+      line-height: 1.76;
+    }
+
+    .scribble {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px dashed rgba(35, 45, 61, 0.22);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.34);
+      color: #374253;
+      max-width: 50ch;
+      line-height: 1.68;
+    }
+
+    .quick-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .pill,
+    .tiny-axis,
+    .mode button,
+    .nudge {
+      border: 1px solid rgba(35, 45, 61, 0.14);
+      background: rgba(255, 255, 255, 0.55);
+      border-radius: 999px;
+    }
+
+    .pill,
+    .tiny-axis {
+      padding: 9px 12px;
+      font-size: 0.92rem;
+      color: #334054;
+    }
+
+    .preview-wrap {
+      position: relative;
+      padding-top: 12px;
+    }
+
+    .sticky {
+      position: absolute;
+      right: 8px;
+      top: 0;
+      transform: rotate(5deg);
+      background: #f7de7d;
+      color: #473c0f;
+      padding: 12px 14px;
+      width: 170px;
+      border-radius: 4px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.14);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .sticky strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .photo {
+      margin-top: 46px;
+      padding: 14px;
+      background: #fffdf9;
+      border-radius: 8px;
+      box-shadow: 0 18px 34px rgba(0, 0, 0, 0.18);
+      transform: rotate(var(--preview-tilt)) translateY(var(--preview-shift));
+      transition: transform 180ms ease;
+      position: relative;
+    }
+
+    .photo::before,
+    .photo::after {
+      content: "";
+      position: absolute;
+      width: 86px;
+      height: 18px;
+      background: rgba(208, 221, 236, 0.7);
+      border: 1px solid rgba(91, 108, 132, 0.1);
+    }
+
+    .photo::before {
+      top: -8px;
+      left: 24px;
+      transform: rotate(-8deg);
+    }
+
+    .photo::after {
+      top: -10px;
+      right: 28px;
+      transform: rotate(11deg);
+    }
+
+    .photo-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      color: #5a6477;
+      font-size: 0.88rem;
+      margin-bottom: 10px;
+    }
+
+    .axis-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tiny-axis strong {
+      color: var(--green);
+    }
+
+    .photo img {
+      display: block;
+      width: 100%;
+      border-radius: 4px;
+      border: 1px solid rgba(40, 52, 72, 0.08);
+    }
+
+    .measure-note {
+      position: absolute;
+      left: -16px;
+      bottom: 28px;
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(35, 45, 61, 0.14);
+      border-radius: 14px;
+      padding: 12px 14px;
+      max-width: 210px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+      color: #384357;
+    }
+
+    .measure-note::after {
+      content: "";
+      position: absolute;
+      left: 100%;
+      top: 50%;
+      width: 28px;
+      border-top: 1px dashed rgba(35, 45, 61, 0.22);
+    }
+
+    .nudge-row {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .nudge {
+      cursor: pointer;
+      padding: 10px 14px;
+      color: #30405c;
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    .nudge:hover,
+    .mode button:hover,
+    .nudge:focus-visible,
+    .mode button:focus-visible {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.78);
+      outline: none;
+    }
+
+    .sections {
+      display: grid;
+      gap: 16px;
+      margin-top: 22px;
+    }
+
+    .row {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+
+    .card {
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.52);
+      border: 1px solid rgba(35, 45, 61, 0.12);
+      min-height: 100%;
+      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+      border-color: rgba(35, 45, 61, 0.2);
+      background: rgba(255, 255, 255, 0.66);
+    }
+
+    .card h2,
+    .card h3 {
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+    }
+
+    .card h2 {
+      font-size: 1.65rem;
+    }
+
+    .card h3 {
+      font-size: 1.12rem;
+    }
+
+    .card p {
+      color: #465265;
+      line-height: 1.7;
+    }
+
+    .card-scribble {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border: 1px dashed rgba(35, 45, 61, 0.22);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.34);
+      color: #374253;
+      line-height: 1.68;
+    }
+
+    .span-7 { grid-column: span 7; }
+    .span-5 { grid-column: span 5; }
+    .span-4 { grid-column: span 4; }
+    .span-6 { grid-column: span 6; }
+    .span-8 { grid-column: span 8; }
+
+    .list {
+      list-style: none;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      color: #374356;
+      line-height: 1.55;
+    }
+
+    .list li::before {
+      content: "";
+      width: 11px;
+      height: 11px;
+      border-radius: 2px;
+      transform: rotate(45deg);
+      margin-top: 6px;
+      flex: none;
+      background: linear-gradient(135deg, var(--blue), var(--green));
+    }
+
+    .mode {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .mode button {
+      cursor: pointer;
+      padding: 10px 13px;
+      color: #364257;
+    }
+
+    .mode button.active {
+      background: rgba(92, 132, 255, 0.13);
+      border-color: rgba(92, 132, 255, 0.22);
+      color: #2947a6;
+    }
+
+    .mode-result {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid rgba(35, 45, 61, 0.1);
+      color: #3d495c;
+      line-height: 1.65;
+    }
+
+    .plan-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .plan-item {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.62);
+      border: 1px solid rgba(35, 45, 61, 0.1);
+      color: #384357;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: 18px;
+      color: #596377;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 980px) {
+      .hero,
+      .row,
+      .plan-list {
+        grid-template-columns: 1fr;
+      }
+
+      .span-7,
+      .span-5,
+      .span-4,
+      .span-6,
+      .span-8 {
+        grid-column: auto;
+      }
+
+      .sticky {
+        position: static;
+        transform: none;
+        margin-bottom: 14px;
+        width: auto;
+      }
+
+      .photo {
+        margin-top: 0;
+      }
+
+      .measure-note {
+        position: static;
+        margin-top: 12px;
+        max-width: none;
+      }
+
+      .measure-note::after {
+        display: none;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        width: min(100% - 16px, 1120px);
+        padding-top: 14px;
+      }
+
+      .topbar,
+      .footer {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .sheet {
+        padding: 20px;
+      }
+
+      .coming-banner::before {
+        font-size: 2.5rem;
+        right: 12px;
+        top: 10px;
+      }
+
+      h1 {
+        max-width: none;
+        font-size: clamp(2.3rem, 15vw, 4rem);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 3 4.5 7v10L12 21l7.5-4V7Z"></path>
+            <path d="M12 3v18"></path>
+            <path d="M4.5 7 12 11l7.5-4"></path>
+          </svg>
+        </div>
+        <span>TyroCAD</span>
+      </div>
+    </div>
+
+    <main class="sheet">
+      <div class="clip left" aria-hidden="true"></div>
+      <div class="clip right" aria-hidden="true"></div>
+
+      <div class="content">
+        <section class="hero">
+          <div class="intro">
+            <h1>Made for normal people.</h1>
+            <p class="intro-text">
+              TyroCAD is a CAD app for macOS and iPad. It is meant to be easier to use, workflow-agnostic,
+              and not priced like you are funding somebody's yacht.
+            </p>
+            <div class="quick-row" aria-label="Quick facts">
+              <span class="pill">macOS</span>
+              <span class="pill">iPad</span>
+              <span class="pill">Apple Pencil</span>
+              <span class="pill">OCCT</span>
+              <span class="pill">Affordable</span>
+            </div>
+          </div>
+
+          <div class="preview-wrap">
+            <div class="photo" id="photoFrame">
+              <div class="photo-head">
+                <span>TyroCAD</span>
+                <div class="axis-group" aria-hidden="true">
+                  <span class="tiny-axis">X <strong>sketch</strong></span>
+                  <span class="tiny-axis">Y <strong>edit</strong></span>
+                  <span class="tiny-axis">Z <strong>print</strong></span>
+                </div>
+              </div>
+              <img src="imgs/preview.png" alt="Preview of the TyroCAD modelling workspace.">
+              <div class="measure-note">
+                Choose your own workflow. It can be as simple or as complex as you want.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="sections">
+          <article class="card">
+            <h2>What it has</h2>
+            <ul class="list">
+              <li>Chamfer and fillet support.</li>
+              <li>User-friendly interactivity. Drag and drop, and watch it react.</li>
+              <li>Workflow-agnostic. Use variables, constraints, history edits, or combine all three.</li>
+              <li>Tablet-first design, meaning it is great for couch modelling or on-the-go tweaking and prototyping.</li>
+              <li>Bugs! It is still early days, so bugs are to be expected. Help us by reporting them <a class="link" href="https://github.com/tyrocad/tyrocad/issues">here</a></li>
+
+            </ul>
+          </article>
+
+          <div class="row">
+            <article class="card span-4">
+              <h3>Platforms</h3>
+              <p>macOS and iPad. Apple Pencil support on iPad. Pick up wherever you left off with no fuss.</p>
+            </article>
+            <article class="card span-4">
+              <h3>Files</h3>
+              <p>Export as <code>.tcad</code> for tiny file sizes, or to STL. Other formats are coming soon.</p>
+            </article>
+            <article class="card span-4">
+              <h3>Engine</h3>
+              <p>Powered by OCCT. Open, predictable and robust.</p>
+            </article>
+          </div>
+
+          <div class="row">
+            <article class="card span-6">
+              <h2>Why we are making it</h2>
+              <p>
+                We are making this because of our own love of 3D printing, and because we need a tool free from the clutches of enshittification.
+              </p>
+              <p style="margin-top: 14px;">
+                Current options are either too expensive, too complex, or too limited.
+              </p>
+              <p style="margin-top: 14px;">
+                We aimed to create a tool that is easy to use, workflow-agnostic, portable, and, most importantly, affordable.
+              </p>
+            </article>
+
+            <article class="card span-6">
+              <h2>What is planned</h2>
+              <div class="plan-list">
+                <div class="plan-item">Loft</div>
+                <div class="plan-item">Splines</div>
+                <div class="plan-item">Arcs</div>
+                <div class="plan-item">Sketch transforms</div>
+                <div class="plan-item">More operations</div>
+                <div class="plan-item">More constraints</div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="coming-banner" aria-label="Coming soon">
+          <div>
+            <h2>Coming Soon</h2>
+            <p>TyroCAD is on the way for macOS and iPad. A straightforward CAD app with room to grow.</p>
+          </div>
+        </section>
+
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const photoFrame = document.getElementById('photoFrame');
+    const nudgeButton = document.getElementById('nudgeButton');
+    const nudges = [
+      ['-1.4deg', '-6px'],
+      ['1.2deg', '4px'],
+      ['-2.2deg', '0px'],
+      ['0.8deg', '-3px']
+    ];
+    let nudgeIndex = 0;
+
+    if (nudgeButton) {
+      nudgeButton.addEventListener('click', () => {
+        nudgeIndex = (nudgeIndex + 1) % nudges.length;
+        document.documentElement.style.setProperty('--preview-tilt', nudges[nudgeIndex][0]);
+        document.documentElement.style.setProperty('--preview-shift', nudges[nudgeIndex][1]);
+      });
+    }
+
+    if (photoFrame) {
+      photoFrame.addEventListener('pointermove', (event) => {
+        const bounds = photoFrame.getBoundingClientRect();
+        const x = (event.clientX - bounds.left) / bounds.width - 0.5;
+        const angle = x * 2.8;
+        photoFrame.style.transform = 'rotate(' + angle.toFixed(2) + 'deg) translateY(var(--preview-shift))';
+      });
+
+      photoFrame.addEventListener('pointerleave', () => {
+        photoFrame.style.transform = '';
+      });
+    }
+
+    const modeButtons = document.querySelectorAll('.mode button');
+    const modeResult = document.getElementById('modeResult');
+
+    if (modeButtons.length && modeResult) {
+      modeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          modeButtons.forEach((item) => item.classList.remove('active'));
+          button.classList.add('active');
+          modeResult.textContent = button.dataset.copy;
+        });
+      });
+    }
+  </script>
+</body>
+</html>
